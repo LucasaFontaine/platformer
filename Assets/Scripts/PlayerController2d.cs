@@ -176,23 +176,16 @@ public class PlayerController2D : MonoBehaviour
 
         if (wallCheck != null)
         {
-            RaycastHit2D wallHitRight = Physics2D.Raycast(
+            Vector2 wallDirection = Vector2.right * facingDir;
+
+            RaycastHit2D wallHit = Physics2D.Raycast(
                 wallCheck.position,
-                Vector2.right,
+                wallDirection,
                 wallCheckDistance,
                 wallLayer
             );
 
-            RaycastHit2D wallHitLeft = Physics2D.Raycast(
-                wallCheck.position,
-                Vector2.left,
-                wallCheckDistance,
-                wallLayer
-            );
-
-            isTouchingWall =
-                wallHitRight.collider != null ||
-                wallHitLeft.collider != null;
+            isTouchingWall = wallHit.collider != null;
         }
 
 
@@ -327,16 +320,12 @@ public class PlayerController2D : MonoBehaviour
         {
             Gizmos.color = Color.cyan;
 
-            Gizmos.DrawLine(
-                wallCheck.position,
-                wallCheck.position +
-                Vector3.right * wallCheckDistance
-            );
+            Vector3 direction = Vector3.right * facingDir;
 
             Gizmos.DrawLine(
                 wallCheck.position,
                 wallCheck.position +
-                Vector3.left * wallCheckDistance
+                direction * wallCheckDistance
             );
         }
     }
