@@ -5,7 +5,7 @@ public class Hook : MonoBehaviour
 {
     [SerializeField] private float maxGrappleDistance = 10f;
     [SerializeField] private string grappleTag = "Grapple";
-    [SerializeField] private KeyCode swingKey = KeyCode.W;
+    [SerializeField] private int grappleMouseButton = 1; // 0 = left, 1 = right, 2 = middle
     [SerializeField] private Camera cam;
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private GameObject hookPrefab;
@@ -47,11 +47,11 @@ public class Hook : MonoBehaviour
             grappleCooldownTimer -= Time.deltaTime;
         }
 
-        if (!isSwinging && grappleCooldownTimer <= 0f && Input.GetKeyDown(swingKey))
+        if (!isSwinging && grappleCooldownTimer <= 0f && Input.GetMouseButtonDown(grappleMouseButton))
         {
             TryStartGrapple();
         }
-        else if (isSwinging && (Input.GetKeyUp(swingKey) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
+        else if (isSwinging && (Input.GetMouseButtonUp(grappleMouseButton) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
         {
             EndSwing();
         }
