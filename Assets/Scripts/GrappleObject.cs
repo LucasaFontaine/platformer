@@ -9,6 +9,7 @@ public class GrappleObject : MonoBehaviour
     private Rigidbody2D rb;
     private Transform target;
     private bool isBeingPulled;
+    private float arrivedTime = -1f;
 
     private void Awake()
     {
@@ -19,12 +20,18 @@ public class GrappleObject : MonoBehaviour
     {
         target = pullTarget;
         isBeingPulled = true;
+        arrivedTime = -1f;
     }
 
     public void StopPull()
     {
         isBeingPulled = false;
         rb.linearVelocity = Vector2.zero;
+    }
+
+    public bool HasArrivedFor(float duration)
+    {
+        return arrivedTime >= 0f && Time.time - arrivedTime >= duration;
     }
 
     private void FixedUpdate()
@@ -37,6 +44,7 @@ public class GrappleObject : MonoBehaviour
         if (distance <= stopDistance)
         {
             StopPull();
+            arrivedTime = Time.time;
             return;
         }
 

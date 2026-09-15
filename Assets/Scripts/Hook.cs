@@ -6,13 +6,14 @@ public class Hook : MonoBehaviour
     [SerializeField] private float maxGrappleDistance = 10f;
     [SerializeField] private string grappleTag = "Grapple";
     [SerializeField] private string grappleObjectTag = "GrappleObject";
-    [SerializeField] private int grappleMouseButton = 1;
+    [SerializeField] private int grappleMouseButton = 1; // 0 = left, 1 = right, 2 = middle
     [SerializeField] private Camera cam;
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private GameObject hookPrefab;
     [SerializeField] private float swingDrag = 0.15f;
     [SerializeField] private float grappleCooldown = 1f;
     [SerializeField] private float originOffset = 0.5f;
+    [SerializeField] private float pulledObjectReleaseDelay = 0.5f;
 
     private Rigidbody2D rb;
     private PlayerController2D playerController;
@@ -57,6 +58,11 @@ public class Hook : MonoBehaviour
             TryStartGrapple();
         }
         else if (IsGrappling && (Input.GetMouseButtonUp(grappleMouseButton) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
+        {
+            StopGrapple();
+        }
+
+        if (pulledObject != null && pulledObject.HasArrivedFor(pulledObjectReleaseDelay))
         {
             StopGrapple();
         }
