@@ -7,7 +7,6 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float moveSpeed = 4f;
 
     [Header("Player Visual")]
-    [Tooltip("The visual/sprite child of the player. Only this object is flipped when changing direction. Do NOT assign the Player root or the GunPivot here.")]
     [SerializeField] private Transform playerVisual;
 
     [Header("Jump")]

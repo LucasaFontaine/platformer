@@ -5,12 +5,14 @@ public class Hook : MonoBehaviour
 {
     [SerializeField] private float maxGrappleDistance = 10f;
     [SerializeField] private string grappleTag = "Grapple";
-    [SerializeField] private int grappleMouseButton = 1; // 0 = left, 1 = right, 2 = middle
+    [SerializeField] private string grappleObjectTag = "GrappleObject";
+    [SerializeField] private int grappleMouseButton = 1;
     [SerializeField] private Camera cam;
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private GameObject hookPrefab;
     [SerializeField] private float swingDrag = 0.15f;
     [SerializeField] private float grappleCooldown = 1f;
+    [SerializeField] private float originOffset = 0.5f;
 
     private Rigidbody2D rb;
     private PlayerController2D playerController;
@@ -22,6 +24,9 @@ public class Hook : MonoBehaviour
     private float angularVelocity;
     private float grappleCooldownTimer;
     private GameObject spawnedHook;
+    private GrappleObject pulledObject;
+
+    private bool IsGrappling => isSwinging || pulledObject != null;
 
     private void Awake()
     {
@@ -47,22 +52,27 @@ public class Hook : MonoBehaviour
             grappleCooldownTimer -= Time.deltaTime;
         }
 
-        if (!isSwinging && grappleCooldownTimer <= 0f && Input.GetMouseButtonDown(grappleMouseButton))
+        if (!IsGrappling && grappleCooldownTimer <= 0f && Input.GetMouseButtonDown(grappleMouseButton))
         {
             TryStartGrapple();
         }
-        else if (isSwinging && (Input.GetMouseButtonUp(grappleMouseButton) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
+        else if (IsGrappling && (Input.GetMouseButtonUp(grappleMouseButton) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
         {
-            EndSwing();
+            StopGrapple();
         }
 
         if (lineRenderer != null)
         {
-            lineRenderer.enabled = isSwinging;
+            lineRenderer.enabled = IsGrappling;
             if (isSwinging)
             {
                 lineRenderer.SetPosition(0, anchorPoint);
                 lineRenderer.SetPosition(1, transform.position);
+            }
+            else if (pulledObject != null)
+            {
+                lineRenderer.SetPosition(0, transform.position);
+                lineRenderer.SetPosition(1, pulledObject.transform.position);
             }
         }
     }
@@ -93,17 +103,31 @@ public class Hook : MonoBehaviour
         if (cam == null) return;
 
         Vector2 mouseWorld = cam.ScreenToWorldPoint(Input.mousePosition);
-        Vector2 origin = transform.position;
-        Vector2 direction = (mouseWorld - origin).normalized;
+        Vector2 direction = (mouseWorld - (Vector2)transform.position).normalized;
+        Vector2 origin = (Vector2)transform.position + direction * originOffset;
 
-        int layerMask = ~(1 << gameObject.layer);
-        RaycastHit2D hit = Physics2D.Raycast(origin, direction, maxGrappleDistance, layerMask);
+        RaycastHit2D hit = Physics2D.Raycast(origin, direction, maxGrappleDistance - originOffset);
 
         Debug.DrawRay(origin, direction * maxGrappleDistance, Color.red, 1f);
 
         if (hit.collider == null)
         {
             Debug.Log("Grapple raycast hit nothing.");
+            return;
+        }
+
+        if (hit.collider.CompareTag(grappleObjectTag))
+        {
+            GrappleObject obj = hit.collider.GetComponent<GrappleObject>();
+            if (obj == null)
+            {
+                Debug.Log($"'{hit.collider.name}' is tagged '{grappleObjectTag}' but has no GrappleObject component.");
+                return;
+            }
+
+            pulledObject = obj;
+            pulledObject.StartPull(transform);
+            Debug.Log($"Pulling '{hit.collider.name}' towards the player.");
             return;
         }
 
@@ -139,23 +163,31 @@ public class Hook : MonoBehaviour
         }
     }
 
-    private void EndSwing()
+    private void StopGrapple()
     {
-        if (!isSwinging) return;
-
-        isSwinging = false;
         grappleCooldownTimer = grappleCooldown;
 
-        if (playerController != null)
+        if (isSwinging)
         {
-            playerController.isSwinging = false;
-            playerController.GrantJump();
+            isSwinging = false;
+
+            if (playerController != null)
+            {
+                playerController.isSwinging = false;
+                playerController.GrantJump();
+            }
+
+            if (spawnedHook != null)
+            {
+                Destroy(spawnedHook);
+                spawnedHook = null;
+            }
         }
 
-        if (spawnedHook != null)
+        if (pulledObject != null)
         {
-            Destroy(spawnedHook);
-            spawnedHook = null;
+            pulledObject.StopPull();
+            pulledObject = null;
         }
     }
 

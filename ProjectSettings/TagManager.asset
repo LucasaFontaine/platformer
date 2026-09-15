@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Grapple
+  - GrappleObject
   layers:
   - Default
   - TransparentFX
