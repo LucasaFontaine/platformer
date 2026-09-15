@@ -174,7 +174,6 @@ public class Hook : MonoBehaviour
             if (playerController != null)
             {
                 playerController.isSwinging = false;
-                playerController.GrantJump();
             }
 
             if (spawnedHook != null)
