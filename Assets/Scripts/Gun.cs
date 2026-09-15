@@ -206,12 +206,6 @@ public class Gun : MonoBehaviour
                 pelletAngle
             );
         }
-
-        Debug.Log(
-            "Gun fired " +
-            pelletCount +
-            " pellets."
-        );
     }
 
     private void SpawnPellet(

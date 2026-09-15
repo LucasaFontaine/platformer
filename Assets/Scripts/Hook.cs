@@ -112,7 +112,6 @@ public class Hook : MonoBehaviour
 
         if (hit.collider == null)
         {
-            Debug.Log("Grapple raycast hit nothing.");
             return;
         }
 
@@ -121,23 +120,18 @@ public class Hook : MonoBehaviour
             GrappleObject obj = hit.collider.GetComponent<GrappleObject>();
             if (obj == null)
             {
-                Debug.Log($"'{hit.collider.name}' is tagged '{grappleObjectTag}' but has no GrappleObject component.");
                 return;
             }
 
             pulledObject = obj;
             pulledObject.StartPull(transform);
-            Debug.Log($"Pulling '{hit.collider.name}' towards the player.");
             return;
         }
 
         if (!hit.collider.CompareTag(grappleTag))
         {
-            Debug.Log($"Grapple raycast hit '{hit.collider.name}' but it's tagged '{hit.collider.tag}', not '{grappleTag}'.");
             return;
         }
-
-        Debug.Log($"Grapple attached to '{hit.collider.name}' at {hit.point}.");
 
         StartSwing(hit.point);
     }
