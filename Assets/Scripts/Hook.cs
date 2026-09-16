@@ -57,7 +57,12 @@ public class Hook : MonoBehaviour
         {
             TryStartGrapple();
         }
-        else if (IsGrappling && (Input.GetMouseButtonUp(grappleMouseButton) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
+        else if (IsGrappling && (
+            Input.GetMouseButtonUp(grappleMouseButton) ||
+            Input.GetButtonDown("Jump") ||
+            Input.GetKeyDown(KeyCode.Space) ||
+            Input.GetKeyDown(KeyCode.LeftShift) ||
+            Input.GetKeyDown(KeyCode.RightShift)))
         {
             StopGrapple();
         }
