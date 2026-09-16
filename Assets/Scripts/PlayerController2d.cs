@@ -18,12 +18,6 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float coyoteTime = 0.1f;
     [SerializeField] private float jumpBufferTime = 0.1f;
 
-    [Header("Stamina")]
-    [SerializeField] private float maxStamina = 5f;
-    [SerializeField] private float staminaRegenRate = 0.2f;
-    [SerializeField] private float staminaCostPerJump = 1f;
-    [SerializeField] private float staminaCostPerDash = 1f;
-
     [Header("Wall")]
     [SerializeField] private LayerMask wallLayer;
     [SerializeField] private Transform wallCheck;
@@ -43,6 +37,15 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float dashDuration = 0.15f;
     [SerializeField] private float dashCooldown = 0.6f;
 
+    [Header("Fall Damage")]
+    [SerializeField] private PlayerHealth playerHealth;
+    [SerializeField] private float minFallSpeedForDamage = 10f;
+    [SerializeField] private float fallDamagePerUnitSpeed = 2f;
+
+    [Header("Stamina")]
+    [SerializeField] private float maxStamina = 5f;
+    [SerializeField] private float staminaRegenRate = 0.2f;
+
     [Header("Swing Momentum")]
     [Tooltip("lower = keep momentum, higher = lose momentum")]
     [SerializeField] private float swingMomentumDecayRate = 4f;
@@ -59,6 +62,7 @@ public class PlayerController2D : MonoBehaviour
     private float jumpBufferTimer;
 
     private bool isTouchingWall;
+    private bool wasTouchingWall;
     private int wallSide;
     private float wallCoyoteTimer;
 
@@ -66,17 +70,24 @@ public class PlayerController2D : MonoBehaviour
     private float dashTimer;
     private float dashCooldownTimer;
 
-    private float stamina;
+    private float currentStamina;
 
     private bool hasSwingMomentum;
 
     [HideInInspector] public bool isSwinging;
 
     public int FacingDir => facingDir;
-
-    public float CurrentStamina => stamina;
-
+    public float CurrentStamina => currentStamina;
     public float MaxStamina => maxStamina;
+
+    public void GrantJump(int amount = 1)
+    {
+        jumpsRemaining += amount;
+        jumpsRemaining = Mathf.Min(
+            jumpsRemaining,
+            maxJumps
+        );
+    }
 
     public void PreserveSwingMomentum()
     {
@@ -87,8 +98,13 @@ public class PlayerController2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
 
+        if (playerHealth == null)
+        {
+            playerHealth = GetComponent<PlayerHealth>();
+        }
+
         jumpsRemaining = maxJumps;
-        stamina = maxStamina;
+        currentStamina = maxStamina;
     }
 
     private void Update()
@@ -102,15 +118,6 @@ public class PlayerController2D : MonoBehaviour
             facingDir = (int)Mathf.Sign(moveInput);
 
             UpdatePlayerVisual();
-        }
-
-
-        // STAMINA REGEN
-
-        if (!isDashing && stamina < maxStamina)
-        {
-            stamina += staminaRegenRate * Time.deltaTime;
-            stamina = Mathf.Min(stamina, maxStamina);
         }
 
 
@@ -150,6 +157,17 @@ public class PlayerController2D : MonoBehaviour
             {
                 isDashing = false;
             }
+        }
+
+
+        // STAMINA REGEN
+
+        if (currentStamina < maxStamina)
+        {
+            currentStamina = Mathf.Min(
+                maxStamina,
+                currentStamina + staminaRegenRate * Time.deltaTime
+            );
         }
     }
 
@@ -192,6 +210,8 @@ public class PlayerController2D : MonoBehaviour
 
                 if (!wasGrounded)
                 {
+                    ApplyFallDamage(rb.linearVelocity.y);
+
                     jumpsRemaining = maxJumps;
                 }
 
@@ -205,29 +225,38 @@ public class PlayerController2D : MonoBehaviour
 
 
         // WALL CHECK
-        // Only checks in the direction the player is facing
 
         isTouchingWall = false;
         int detectedWallSide = 0;
 
         if (wallCheck != null)
         {
-            Vector2 wallDirection =
-                facingDir == 1
-                    ? Vector2.right
-                    : Vector2.left;
-
-            RaycastHit2D wallHit = Physics2D.Raycast(
+            RaycastHit2D wallHitRight = Physics2D.Raycast(
                 wallCheck.position,
-                wallDirection,
+                Vector2.right,
                 wallCheckDistance,
                 wallLayer
             );
 
-            if (wallHit.collider != null)
+            if (wallHitRight.collider != null)
             {
                 isTouchingWall = true;
-                detectedWallSide = facingDir;
+                detectedWallSide = 1;
+            }
+            else
+            {
+                RaycastHit2D wallHitLeft = Physics2D.Raycast(
+                    wallCheck.position,
+                    Vector2.left,
+                    wallCheckDistance,
+                    wallLayer
+                );
+
+                if (wallHitLeft.collider != null)
+                {
+                    isTouchingWall = true;
+                    detectedWallSide = -1;
+                }
             }
         }
 
@@ -242,11 +271,29 @@ public class PlayerController2D : MonoBehaviour
         }
 
 
+        // TOUCHING WALL FOR FIRST TIME
+
+        if (isTouchingWall && !wasTouchingWall)
+        {
+            jumpsRemaining++;
+
+            jumpsRemaining = Mathf.Min(
+                jumpsRemaining,
+                maxJumps
+            );
+
+            dashCooldownTimer = 0f;
+        }
+
+        wasTouchingWall = isTouchingWall;
+
+
         // DASH
 
         if (isDashing)
         {
-            if (jumpBufferTimer > 0f)
+            if (jumpBufferTimer > 0f &&
+                jumpsRemaining > 0)
             {
                 isDashing = false;
             }
@@ -266,7 +313,8 @@ public class PlayerController2D : MonoBehaviour
 
         if (hasSwingMomentum)
         {
-            float targetX = moveInput * moveSpeed;
+            float targetX =
+                moveInput * moveSpeed;
 
             float newX = Mathf.MoveTowards(
                 rb.linearVelocity.x,
@@ -280,7 +328,9 @@ public class PlayerController2D : MonoBehaviour
                 rb.linearVelocity.y
             );
 
-            if (Mathf.Approximately(newX, targetX))
+            if (Mathf.Approximately(
+                newX,
+                targetX))
             {
                 hasSwingMomentum = false;
             }
@@ -294,7 +344,7 @@ public class PlayerController2D : MonoBehaviour
         }
 
 
-        // WALL JUMP
+        // JUMP
 
         bool canWallJump =
             jumpBufferTimer > 0f &&
@@ -302,6 +352,22 @@ public class PlayerController2D : MonoBehaviour
             (
                 isTouchingWall ||
                 wallCoyoteTimer > 0f
+            );
+
+        bool groundJumpAvailable =
+            isGrounded ||
+            coyoteTimer > 0f;
+
+        bool canDoubleJump =
+            jumpsRemaining < maxJumps &&
+            currentStamina >= 1f;
+
+        bool canJumpNow =
+            jumpBufferTimer > 0f &&
+            jumpsRemaining > 0 &&
+            (
+                groundJumpAvailable ||
+                canDoubleJump
             );
 
         if (canWallJump)
@@ -316,54 +382,47 @@ public class PlayerController2D : MonoBehaviour
             wallCoyoteTimer = 0f;
 
             isTouchingWall = false;
-
-            return;
         }
-
-
-        // NORMAL / DOUBLE JUMP
-
-        bool wantsToJump = jumpBufferTimer > 0f;
-
-        if (wantsToJump)
+        else if (canJumpNow)
         {
-            // Ground jump is free
+            bool wasDoubleJump =
+                !groundJumpAvailable &&
+                canDoubleJump;
 
-            if (isGrounded || coyoteTimer > 0f)
+            rb.linearVelocity = new Vector2(
+                rb.linearVelocity.x,
+                jumpForce
+            );
+
+            jumpsRemaining--;
+
+            jumpBufferTimer = 0f;
+            coyoteTimer = 0f;
+
+            if (wasDoubleJump)
             {
-                rb.linearVelocity = new Vector2(
-                    rb.linearVelocity.x,
-                    jumpForce
-                );
-
-                jumpsRemaining = maxJumps - 1;
-
-                jumpBufferTimer = 0f;
-                coyoteTimer = 0f;
-
-                return;
-            }
-
-
-            // Extra jumps require stamina
-
-            if (jumpsRemaining > 0 &&
-                stamina >= staminaCostPerJump)
-            {
-                stamina -= staminaCostPerJump;
-
-                jumpsRemaining--;
-
-                rb.linearVelocity = new Vector2(
-                    rb.linearVelocity.x,
-                    jumpForce
-                );
-
-                jumpBufferTimer = 0f;
+                currentStamina -= 1f;
             }
         }
     }
 
+    // FALL DAMAGE
+
+    private void ApplyFallDamage(float impactVelocityY)
+    {
+        float fallSpeedMagnitude = -impactVelocityY;
+
+        if (fallSpeedMagnitude <= minFallSpeedForDamage)
+            return;
+
+        if (playerHealth == null)
+            return;
+
+        float excessSpeed = fallSpeedMagnitude - minFallSpeedForDamage;
+        float damage = excessSpeed * fallDamagePerUnitSpeed;
+
+        playerHealth.TakeDamage(damage);
+    }
 
     // DASH
 
@@ -375,17 +434,16 @@ public class PlayerController2D : MonoBehaviour
         if (dashCooldownTimer > 0f)
             return;
 
-        if (stamina < staminaCostPerDash)
+        if (currentStamina < 1f)
             return;
-
-        stamina -= staminaCostPerDash;
 
         isDashing = true;
 
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
-    }
 
+        currentStamina -= 1f;
+    }
 
     // DEBUG / GIZMOS
 
@@ -407,15 +465,17 @@ public class PlayerController2D : MonoBehaviour
         {
             Gizmos.color = Color.cyan;
 
-            Vector3 direction =
-                facingDir == 1
-                    ? Vector3.right
-                    : Vector3.left;
+            Gizmos.DrawLine(
+                wallCheck.position,
+                wallCheck.position +
+                Vector3.right *
+                wallCheckDistance
+            );
 
             Gizmos.DrawLine(
                 wallCheck.position,
                 wallCheck.position +
-                direction *
+                Vector3.left *
                 wallCheckDistance
             );
         }
