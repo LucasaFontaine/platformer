@@ -11,7 +11,7 @@ public class Hook : MonoBehaviour
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private GameObject hookPrefab;
     [SerializeField] private float swingDrag = 0.15f;
-    [SerializeField] private float grappleCooldown = 1f;
+    [SerializeField] private float grappleCooldown = 0.01f;
     [SerializeField] private float originOffset = 0.5f;
     [SerializeField] private float pulledObjectReleaseDelay = 0.5f;
 
