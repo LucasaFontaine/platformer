@@ -39,8 +39,8 @@ public class PlayerController2D : MonoBehaviour
 
     [Header("Fall Damage")]
     [SerializeField] private PlayerHealth playerHealth;
-    [SerializeField] private float minFallSpeedForDamage = 10f;
-    [SerializeField] private float fallDamagePerUnitSpeed = 2f;
+    [SerializeField] private float minFallSpeedForDamage = 20f;
+    [SerializeField] private float fallDamagePerUnitSpeed = 4f;
 
     [Header("Stamina")]
     [SerializeField] private float maxStamina = 5f;
