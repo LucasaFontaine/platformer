@@ -37,7 +37,15 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float dashSpeed = 18f;
     [SerializeField] private float dashDuration = 0.15f;
     [SerializeField] private float dashCooldown = 0.6f;
-    [SerializeField] private int maxDashes = 1;
+
+    [Header("Fall Damage")]
+    [SerializeField] private PlayerHealth playerHealth;
+    [SerializeField] private float minFallSpeedForDamage = 20f;
+    [SerializeField] private float fallDamagePerUnitSpeed = 4f;
+
+    [Header("Stamina")]
+    [SerializeField] private float maxStamina = 5f;
+    [SerializeField] private float staminaRegenRate = 0.2f;
 
     [Tooltip("Dash speed multiplier when dashDirection has an upward component (includes up-left/up-right).")]
     [SerializeField] private float dashUpStrength = 0.5f;
@@ -71,14 +79,17 @@ public class PlayerController2D : MonoBehaviour
     private bool isDashing;
     private float dashTimer;
     private float dashCooldownTimer;
-    private int dashesRemaining;
     private Vector2 dashDirection;
+
+    private float currentStamina;
 
     private bool hasSwingMomentum;
 
     [HideInInspector] public bool isSwinging;
 
     public int FacingDir => facingDir;
+    public float CurrentStamina => currentStamina;
+    public float MaxStamina => maxStamina;
 
     public void GrantJump(int amount = 1)
     {
@@ -98,8 +109,13 @@ public class PlayerController2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
 
+        if (playerHealth == null)
+        {
+            playerHealth = GetComponent<PlayerHealth>();
+        }
+
         jumpsRemaining = maxJumps;
-        dashesRemaining = maxDashes;
+        currentStamina = maxStamina;
     }
 
     private void Update()
@@ -153,6 +169,17 @@ public class PlayerController2D : MonoBehaviour
                 isDashing = false;
             }
         }
+
+
+        // STAMINA REGEN
+
+        if (currentStamina < maxStamina)
+        {
+            currentStamina = Mathf.Min(
+                maxStamina,
+                currentStamina + staminaRegenRate * Time.deltaTime
+            );
+        }
     }
 
     private void UpdatePlayerVisual()
@@ -194,8 +221,9 @@ public class PlayerController2D : MonoBehaviour
 
                 if (!wasGrounded)
                 {
+                    ApplyFallDamage(rb.linearVelocity.y);
+
                     jumpsRemaining = maxJumps;
-                    dashesRemaining = maxDashes;
                 }
 
                 hasSwingMomentum = false;
@@ -266,7 +294,6 @@ public class PlayerController2D : MonoBehaviour
             );
 
             dashCooldownTimer = 0f;
-            dashesRemaining = maxDashes;
         }
 
         wasTouchingWall = isTouchingWall;
@@ -324,13 +351,20 @@ public class PlayerController2D : MonoBehaviour
                 wallCoyoteTimer > 0f
             );
 
+        bool groundJumpAvailable =
+            isGrounded ||
+            coyoteTimer > 0f;
+
+        bool canDoubleJump =
+            jumpsRemaining < maxJumps &&
+            currentStamina >= 1f;
+
         bool canJumpNow =
             jumpBufferTimer > 0f &&
             jumpsRemaining > 0 &&
             (
-                isGrounded ||
-                coyoteTimer > 0f ||
-                jumpsRemaining < maxJumps
+                groundJumpAvailable ||
+                canDoubleJump
             );
 
         if (canWallJump)
@@ -348,6 +382,10 @@ public class PlayerController2D : MonoBehaviour
         }
         else if (canJumpNow)
         {
+            bool wasDoubleJump =
+                !groundJumpAvailable &&
+                canDoubleJump;
+
             rb.linearVelocity = new Vector2(
                 rb.linearVelocity.x,
                 jumpForce
@@ -357,7 +395,30 @@ public class PlayerController2D : MonoBehaviour
 
             jumpBufferTimer = 0f;
             coyoteTimer = 0f;
+
+            if (wasDoubleJump)
+            {
+                currentStamina -= 1f;
+            }
         }
+    }
+
+    // FALL DAMAGE
+
+    private void ApplyFallDamage(float impactVelocityY)
+    {
+        float fallSpeedMagnitude = -impactVelocityY;
+
+        if (fallSpeedMagnitude <= minFallSpeedForDamage)
+            return;
+
+        if (playerHealth == null)
+            return;
+
+        float excessSpeed = fallSpeedMagnitude - minFallSpeedForDamage;
+        float damage = excessSpeed * fallDamagePerUnitSpeed;
+
+        playerHealth.TakeDamage(damage);
     }
 
     // DASH
@@ -370,7 +431,7 @@ public class PlayerController2D : MonoBehaviour
         if (dashCooldownTimer > 0f)
             return;
 
-        if (dashesRemaining <= 0)
+        if (currentStamina < 1f)
             return;
 
         isDashing = true;
@@ -379,7 +440,7 @@ public class PlayerController2D : MonoBehaviour
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
 
-        dashesRemaining--;
+        currentStamina -= 1f;
     }
 
     private Vector2 GetDashDirection()

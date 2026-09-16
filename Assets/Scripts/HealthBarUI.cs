@@ -5,8 +5,6 @@ using UnityEngine.UI;
 [RequireComponent(typeof(CanvasGroup))]
 public class HealthBarUI : MonoBehaviour
 {
-    [SerializeField] private Transform target;
-    [SerializeField] private Vector3 offset = new Vector3(0f, 1.5f, 0f);
     [SerializeField] private PlayerHealth playerHealth;
     [SerializeField] private Slider slider;
     [SerializeField] private float visibleDuration = 2f;
@@ -38,14 +36,6 @@ public class HealthBarUI : MonoBehaviour
         if (playerHealth != null)
         {
             playerHealth.OnHealthChanged -= HandleHealthChanged;
-        }
-    }
-
-    private void LateUpdate()
-    {
-        if (target != null)
-        {
-            transform.position = target.position + offset;
         }
     }
 
