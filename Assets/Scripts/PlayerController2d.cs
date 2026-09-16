@@ -39,6 +39,15 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float dashCooldown = 0.6f;
     [SerializeField] private int maxDashes = 1;
 
+    [Tooltip("Dash speed multiplier when dashDirection has an upward component (includes up-left/up-right).")]
+    [SerializeField] private float dashUpStrength = 0.5f;
+
+    [Tooltip("Dash speed multiplier when dashDirection has a downward component (includes down-left/down-right).")]
+    [SerializeField] private float dashDownStrength = 1f;
+
+    [Tooltip("Dash speed multiplier when dashDirection is purely horizontal.")]
+    [SerializeField] private float dashHorizontalStrength = 1f;
+
     [Header("Swing Momentum")]
     [Tooltip("lower = keep momentum, higher = lose momentum")]
     [SerializeField] private float swingMomentumDecayRate = 4f;
@@ -274,7 +283,11 @@ public class PlayerController2D : MonoBehaviour
             }
             else
             {
-                rb.linearVelocity = dashDirection * dashSpeed;
+                float strength = dashDirection.y > 0f
+                    ? dashUpStrength
+                    : (dashDirection.y < 0f ? dashDownStrength : dashHorizontalStrength);
+
+                rb.linearVelocity = dashDirection * dashSpeed * strength;
 
                 return;
             }
