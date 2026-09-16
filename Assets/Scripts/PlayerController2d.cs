@@ -63,6 +63,7 @@ public class PlayerController2D : MonoBehaviour
     private float dashTimer;
     private float dashCooldownTimer;
     private int dashesRemaining;
+    private Vector2 dashDirection;
 
     private bool hasSwingMomentum;
 
@@ -273,10 +274,7 @@ public class PlayerController2D : MonoBehaviour
             }
             else
             {
-                rb.linearVelocity = new Vector2(
-                    facingDir * dashSpeed,
-                    0f
-                );
+                rb.linearVelocity = dashDirection * dashSpeed;
 
                 return;
             }
@@ -363,11 +361,32 @@ public class PlayerController2D : MonoBehaviour
             return;
 
         isDashing = true;
+        dashDirection = GetDashDirection();
 
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
 
         dashesRemaining--;
+    }
+
+    private Vector2 GetDashDirection()
+    {
+        float x = 0f;
+        float y = 0f;
+
+        if (Input.GetKey(KeyCode.D)) x += 1f;
+        if (Input.GetKey(KeyCode.A)) x -= 1f;
+        if (Input.GetKey(KeyCode.W)) y += 1f;
+        if (Input.GetKey(KeyCode.S)) y -= 1f;
+
+        Vector2 dir = new Vector2(x, y);
+
+        if (dir == Vector2.zero)
+        {
+            return new Vector2(facingDir, 0f);
+        }
+
+        return dir.normalized;
     }
 
     // DEBUG / GIZMOS
