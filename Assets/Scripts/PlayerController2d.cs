@@ -5,6 +5,7 @@ public class PlayerController2D : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
+    [SerializeField] private Momentum2D runMomentum = new Momentum2D();
 
     [Header("Player Visual")]
     [SerializeField] private Transform playerVisual;
@@ -46,6 +47,15 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float maxStamina = 5f;
     [SerializeField] private float staminaRegenRate = 0.2f;
 
+    [Tooltip("Dash speed multiplier when dashDirection has an upward component (includes up-left/up-right).")]
+    [SerializeField] private float dashUpStrength = 0.5f;
+
+    [Tooltip("Dash speed multiplier when dashDirection has a downward component (includes down-left/down-right).")]
+    [SerializeField] private float dashDownStrength = 1f;
+
+    [Tooltip("Dash speed multiplier when dashDirection is purely horizontal.")]
+    [SerializeField] private float dashHorizontalStrength = 1f;
+
     [Header("Swing Momentum")]
     [Tooltip("lower = keep momentum, higher = lose momentum")]
     [SerializeField] private float swingMomentumDecayRate = 4f;
@@ -69,6 +79,7 @@ public class PlayerController2D : MonoBehaviour
     private bool isDashing;
     private float dashTimer;
     private float dashCooldownTimer;
+    private Vector2 dashDirection;
 
     private float currentStamina;
 
@@ -299,10 +310,11 @@ public class PlayerController2D : MonoBehaviour
             }
             else
             {
-                rb.linearVelocity = new Vector2(
-                    facingDir * dashSpeed,
-                    0f
-                );
+                float strength = dashDirection.y > 0f
+                    ? dashUpStrength
+                    : (dashDirection.y < 0f ? dashDownStrength : dashHorizontalStrength);
+
+                rb.linearVelocity = dashDirection * dashSpeed * strength;
 
                 return;
             }
@@ -311,36 +323,21 @@ public class PlayerController2D : MonoBehaviour
 
         // HORIZONTAL MOVEMENT
 
-        if (hasSwingMomentum)
+        float targetX = moveInput * moveSpeed;
+
+        float newX = hasSwingMomentum
+            ? Momentum2D.StepAtRate(rb.linearVelocity.x, targetX, swingMomentumDecayRate, Time.fixedDeltaTime)
+            : runMomentum.Step(rb.linearVelocity.x, targetX, Time.fixedDeltaTime);
+
+        rb.linearVelocity = new Vector2(
+            newX,
+            rb.linearVelocity.y
+        );
+
+        if (hasSwingMomentum &&
+            Mathf.Approximately(newX, targetX))
         {
-            float targetX =
-                moveInput * moveSpeed;
-
-            float newX = Mathf.MoveTowards(
-                rb.linearVelocity.x,
-                targetX,
-                swingMomentumDecayRate *
-                Time.fixedDeltaTime
-            );
-
-            rb.linearVelocity = new Vector2(
-                newX,
-                rb.linearVelocity.y
-            );
-
-            if (Mathf.Approximately(
-                newX,
-                targetX))
-            {
-                hasSwingMomentum = false;
-            }
-        }
-        else
-        {
-            rb.linearVelocity = new Vector2(
-                moveInput * moveSpeed,
-                rb.linearVelocity.y
-            );
+            hasSwingMomentum = false;
         }
 
 
@@ -438,11 +435,32 @@ public class PlayerController2D : MonoBehaviour
             return;
 
         isDashing = true;
+        dashDirection = GetDashDirection();
 
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
 
         currentStamina -= 1f;
+    }
+
+    private Vector2 GetDashDirection()
+    {
+        float x = 0f;
+        float y = 0f;
+
+        if (Input.GetKey(KeyCode.D)) x += 1f;
+        if (Input.GetKey(KeyCode.A)) x -= 1f;
+        if (Input.GetKey(KeyCode.W)) y += 1f;
+        if (Input.GetKey(KeyCode.S)) y -= 1f;
+
+        Vector2 dir = new Vector2(x, y);
+
+        if (dir == Vector2.zero)
+        {
+            return new Vector2(facingDir, 0f);
+        }
+
+        return dir.normalized;
     }
 
     // DEBUG / GIZMOS

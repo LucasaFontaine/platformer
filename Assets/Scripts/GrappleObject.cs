@@ -5,6 +5,7 @@ public class GrappleObject : MonoBehaviour
 {
     [SerializeField] private float pullSpeed = 8f;
     [SerializeField] private float stopDistance = 0.5f;
+    [SerializeField] private Momentum2D pullMomentum = new Momentum2D();
 
     private Rigidbody2D rb;
     private Transform target;
@@ -26,7 +27,6 @@ public class GrappleObject : MonoBehaviour
     public void StopPull()
     {
         isBeingPulled = false;
-        rb.linearVelocity = Vector2.zero;
     }
 
     public bool HasArrivedFor(float duration)
@@ -43,11 +43,14 @@ public class GrappleObject : MonoBehaviour
 
         if (distance <= stopDistance)
         {
+            rb.linearVelocity = Vector2.zero;
             StopPull();
             arrivedTime = Time.time;
             return;
         }
 
-        rb.linearVelocity = toTarget.normalized * pullSpeed;
+        Vector2 targetVelocity = toTarget.normalized * pullSpeed;
+
+        rb.linearVelocity = pullMomentum.Step(rb.linearVelocity, targetVelocity, Time.fixedDeltaTime);
     }
 }

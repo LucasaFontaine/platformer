@@ -11,7 +11,7 @@ public class Hook : MonoBehaviour
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private GameObject hookPrefab;
     [SerializeField] private float swingDrag = 0.15f;
-    [SerializeField] private float grappleCooldown = 1f;
+    [SerializeField] private float grappleCooldown = 0.2f;
     [SerializeField] private float originOffset = 0.5f;
     [SerializeField] private float pulledObjectReleaseDelay = 0.5f;
 
@@ -57,7 +57,12 @@ public class Hook : MonoBehaviour
         {
             TryStartGrapple();
         }
-        else if (IsGrappling && (Input.GetMouseButtonUp(grappleMouseButton) || Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space)))
+        else if (IsGrappling && (
+            Input.GetMouseButtonUp(grappleMouseButton) ||
+            Input.GetButtonDown("Jump") ||
+            Input.GetKeyDown(KeyCode.Space) ||
+            Input.GetKeyDown(KeyCode.LeftShift) ||
+            Input.GetKeyDown(KeyCode.RightShift)))
         {
             StopGrapple();
         }
@@ -174,6 +179,7 @@ public class Hook : MonoBehaviour
             if (playerController != null)
             {
                 playerController.isSwinging = false;
+                playerController.PreserveSwingMomentum();
             }
 
             if (spawnedHook != null)

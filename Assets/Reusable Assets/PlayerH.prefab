@@ -280,7 +280,7 @@ MonoBehaviour:
   lineRenderer: {fileID: 350459750987717124}
   hookPrefab: {fileID: 5060024456505564653, guid: ef4627bfae7e94600914f7a41c9992a3, type: 3}
   swingDrag: 0.15
-  grappleCooldown: 1
+  grappleCooldown: 0.01
 --- !u!120 &350459750987717124
 LineRenderer:
   serializedVersion: 3
