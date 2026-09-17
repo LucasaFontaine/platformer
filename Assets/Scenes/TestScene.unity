@@ -3778,6 +3778,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrappleObject
   pullSpeed: 8
   stopDistance: 1
+  pullMomentum:
+    acceleration: 30
+    deceleration: 30
 --- !u!1 &2019926587
 GameObject:
   m_ObjectHideFlags: 0
@@ -4192,6 +4195,10 @@ PrefabInstance:
       propertyPath: cam
       value: 
       objectReference: {fileID: 519420031}
+    - target: {fileID: 5063509622984530595, guid: 5a1f84825a8f146ba890381cc42540a4, type: 3}
+      propertyPath: grappleCooldown
+      value: 0.1
+      objectReference: {fileID: 0}
     - target: {fileID: 5545627014398052308, guid: 5a1f84825a8f146ba890381cc42540a4, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
